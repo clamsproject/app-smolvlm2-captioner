@@ -1,0 +1,26 @@
+default_prompt: |
+  I'm looking at a video frame. Can you describe what is shown in this frame? Include any important details about people, objects, text, and setting visible in the frame.
+
+context_config:
+  input_context: "fixed_window"  # Options: "timeframe", "image", "fixed_window"
+
+  fixed_window:
+    window_duration: 1  # in seconds
+    stride: 5  # in seconds
+
+  timeframe:
+    app_uri: "http://apps.clams.ai/slatedetection"
+    label_mapping:
+      "slate": "slate"
+      "non-slate": "default"
+
+custom_prompts:
+  slate: |
+    This is a slate frame from a video. Please analyze it and extract all key information: 
+    - Title of the program
+    - Date of recording
+    - Any identifiers, codes, or numbers
+    - Name of production company or network
+    - Any other textual information visible 
+    
+    Format the information clearly. 
