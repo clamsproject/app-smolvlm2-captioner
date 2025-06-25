@@ -35,6 +35,24 @@ python app.py
 
 The app can be used with the CLAMS workflow manager or standalone via REST API.
 
+### Running with a config file
+
+You can run the app using a YAML config file to specify prompts and context configuration. For example:
+
+```bash
+python cli.py --config config/default.yaml input.mmif output.mmif
+```
+
+- `--config` specifies the path to the YAML config file.
+- The config file can define `default_prompt`, `custom_prompts`, and `context_config`.
+- You can override `defaultPrompt` and `promptMap` via CLI if needed.
+
+### Prompt Handling
+- The app will use a label-specific prompt from `custom_prompts` if available (via `promptMap`), otherwise it will use the `default_prompt` (via `defaultPrompt`).
+- If neither is provided, a generic fallback prompt will be used.
+
+See `config/default.yaml` for an example config file format.
+
 ### Configuration
 
 The app uses YAML configuration files to control behavior. Sample configuration files are provided in the `config/` directory. The main parameters include:
