@@ -1,0 +1,23 @@
+## This config file is for running smolvlm2 over the hawaii chyron dataset using the instructions
+## which were provided to the annotators as the prompt to the model. The config is designed to 
+## be run over mmif files containing swt annotations which were used to create the dataset.
+## The dataset is a filtered selection of the swt-labeled chyron frames and as a result the 
+## output from running this config will be a superset of the hichy dataset.
+
+custom_prompts:
+  "chyron": |
+    Transcribe verbatim the text in the "lower third" or "chyron" area of the screen, including every character.  Preserve spacing and line breaks where feasible.
+    Do not, under any circumstances, include text that is in the top half of the frame.
+    Even for text in the bottom half of frame, do not include the text unless it is part of the chyron graphical element.  Easily legible text in a logo that is part of the chyron should be included, but watermarks, background text, and filmed text should be omitted.
+    To transcribe an okina character, use the backtick: (ASCII code 39).
+
+context_config:
+  input_context: "timeframe" 
+
+  timeframe:
+    app_uri: "http://apps.clams.ai/swt-detection/"
+          
+    label_mapping:
+      "chyron": "chyron"
+
+    ignore_other_labels: true 
