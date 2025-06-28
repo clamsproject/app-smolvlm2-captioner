@@ -1,0 +1,33 @@
+default_prompt: |
+  Analyze this video frame and output exactly ONE character based on the following categories:
+
+  B - SMPTE bars (color bars typically appearing before/after a program)
+  S - Program slate (basic program information displayed before a program)
+  W - Warning for audience (information about sensitive content level)
+  L - Logo (organization logo, not a title card)
+  O - Opening sequence text (text from opening credits/intro sequence)
+  M - Main title card (title of the main program)
+  I - Chyron for person ID (lower third text identifying focal person)
+  N - Person focal and chyron; No ID (lower third text with focal person but not identifying them)
+  E - Person focal, with Extra text (prominent person with extra text that's not a chyron)
+  P - Person focal; No text (prominent person without text)
+  Y - Chyron; No focal person (lower third text without prominent person)
+  U - Subtitling (burned-in subtitles)
+  K - Ticker; No chyron (ticker/crawler text without traditional chyron)
+  G - Graphical text (text arranged with graphics)
+  T - Text, miscellaneous (ordinary frame with miscellaneous text)
+  F - Filmed text (camera footage of prominent, readable text)
+  C - Closing credits (frame from closing credits sequence)
+  R - Copyright statement (rights holder, year, copyright symbol)
+
+  Output only the single character that best matches the frame content. If none of the categories match, output "X".
+
+context_config:
+  input_context: "fixed_window"  # Process frames at regular intervals
+
+  fixed_window:
+    window_duration: 1  # 1 second window
+    stride: 1  # 1 second stride (1 frame per second)
+
+# This config will generate a time point annotation, alignment annotation, and text document
+# with single character outputs representing the frame category
