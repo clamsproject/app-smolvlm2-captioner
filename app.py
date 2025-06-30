@@ -86,7 +86,7 @@ class SmolVLM2Captioner(ClamsApp):
                     'ignore_other_labels': False
                 }
             }
-        batch_size = 8
+        batch_size = 128
         new_view: View = mmif.new_view()
         self.sign_view(new_view, parameters)
         new_view.new_contain(DocumentTypes.TextDocument)
@@ -184,7 +184,7 @@ class SmolVLM2Captioner(ClamsApp):
             try:
                 total_frames = int(video_doc.get_property('frameCount'))
             except:
-                total_frames = int(29.97*60*1)
+                total_frames = int(29.97*60*60)
             frame_numbers = list(range(0, total_frames, int(fps * stride)))
         else:
             raise ValueError(f"Unsupported input context: {input_context}")
