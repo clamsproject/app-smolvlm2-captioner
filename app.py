@@ -86,7 +86,7 @@ class SmolVLM2Captioner(ClamsApp):
                     'ignore_other_labels': False
                 }
             }
-        batch_size = 128
+        batch_size = 32
         new_view: View = mmif.new_view()
         self.sign_view(new_view, parameters)
         new_view.new_contain(DocumentTypes.TextDocument)
@@ -126,9 +126,14 @@ class SmolVLM2Captioner(ClamsApp):
                                 # For integer tensors (like input_ids, attention_mask), only move to device
                                 inputs[key] = value.to(device=self.device)
                     
+                    # Get num_beams parameter and set do_sample accordingly
+                    num_beams = parameters.get('num_beams', 1)
+                    do_sample = num_beams == 1
+                    
                     outputs = self.model.generate(
                         **inputs,
-                        do_sample=False,
+                        do_sample=do_sample,
+                        num_beams=num_beams,
                         max_new_tokens=200,
                         min_length=1,
                     )
