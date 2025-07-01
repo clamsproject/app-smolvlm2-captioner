@@ -63,6 +63,13 @@ def appmetadata() -> AppMetadata:
         name='config', type='string', default="config/default.yaml", description='Name of the config file to use.'
     )
     
+    # add parameter for num_beams
+    metadata.add_parameter(
+        name='num_beams', type='integer', default=1,
+        description='Number of beams for beam search during text generation. Default is 1. '
+                    'Higher values may improve quality but increase generation time.'
+    )
+    
     return metadata
 
 
