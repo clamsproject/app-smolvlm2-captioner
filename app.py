@@ -143,9 +143,17 @@ class SmolVLM2Captioner(ClamsApp):
                     )[0]
                     # remove "Assistant: " and everything before it
                     generated_text = generated_text.split("Assistant: ")[1]
-                    text_document = new_view.new_textdocument(generated_text.strip())
+                    # Create text document with origin from the input document
+                    text_document = new_view.new_textdocument(
+                        text=generated_text.strip(),
+                        document=annotation.get('document_id'),  # Source document (video/image)
+                        origin=annotation.get('origin_id'),  # Input text document that was used
+                        provenance='derived',
+                        mime='application/json'
+                    )
+                    # Create alignment to the same TimePoint as the input document
                     alignment = new_view.new_annotation(AnnotationTypes.Alignment)
-                    alignment.add_property("source", annotation['source'])
+                    alignment.add_property("source", annotation['source'])  # TimePoint ID
                     alignment.add_property("target", text_document.long_id)
             finally:
                 if torch.cuda.is_available():
@@ -159,7 +167,7 @@ class SmolVLM2Captioner(ClamsApp):
                 batch_docs = image_docs[i:i + batch_size]
                 prompts = [self.get_prompt('default', parameters)] * len(batch_docs)
                 images = [Image.open(doc.location_path()) for doc in batch_docs]
-                annotations_batch = [{'source': doc.long_id} for doc in batch_docs]
+                annotations_batch = [{'source': doc.long_id, 'document_id': doc.id, 'origin_id': doc.long_id} for doc in batch_docs]
                 start_time = time.time()
                 process_batch(prompts, images, annotations_batch)
                 self.logger.debug(f"Processed batch of {len(batch_docs)} in {time.time() - start_time:.2f} seconds")
@@ -228,7 +236,11 @@ class SmolVLM2Captioner(ClamsApp):
                     prompt = self.get_prompt(mapped_label, parameters)
                     prompts.append(prompt)
                     representative_id = timeframe.get_property('representatives')[0]
-                    annotations_batch.append({'source': representative_id})
+                    annotations_batch.append({
+                        'source': representative_id,  # TimePoint ID
+                        'document_id': video_doc.id,  # Video document
+                        'origin_id': timeframe.long_id  # TimeFrame that was used
+                    })
                 start_time = time.time()
                 process_batch(prompts, batch_images, annotations_batch)
                 self.logger.debug(f"Processed batch of {len(batch_timeframes)} in {time.time() - start_time:.2f} seconds")
@@ -248,7 +260,11 @@ class SmolVLM2Captioner(ClamsApp):
                 images_batch.append(image)
                 timepoint = new_view.new_annotation(AnnotationTypes.TimePoint)
                 timepoint.add_property("timePoint", frame_number)
-                annotations_batch.append({'source': timepoint.long_id})
+                annotations_batch.append({
+                    'source': timepoint.long_id,  # TimePoint ID
+                    'document_id': video_doc.id,  # Video document
+                    'origin_id': timepoint.long_id  # TimePoint that was used
+                })
                 if len(prompts) == batch_size:
                     start_time = time.time()
                     process_batch(prompts, images_batch, annotations_batch)
