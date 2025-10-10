@@ -1,15 +1,16 @@
 # Make sure clams-python version is explicitly specified, at least the lower bound
-clams-python==1.2.6
+clams-python==1.3.2
+mmif-python[cv]
 # Dependencies for SmolVLM2 multimodal model
 torch>=1.10.0
 transformers>=4.37.0
+torchvision>=0.15.0
 Pillow>=8.0.0
 bitsandbytes==0.42.0
-opencv-python==4.9.0.80
 accelerate==0.30.1
 sentencepiece
 tqdm
 pyyaml
 flash-attn>=2.3.3
 scikit-image
-numpy
+num2words
