@@ -47,6 +47,10 @@ python cli.py --config config/default.yaml input.mmif output.mmif
 - The config file can define `default_prompt`, `custom_prompts`, and `context_config`.
 - You can override `defaultPrompt` and `promptMap` via CLI if needed.
 
+### Using custom configs with containers
+
+When running the containerized version, you can override the built-in configuration directory by mounting an external directory to `/app/config` in the container. This allows you to use completely custom configuration files without rebuilding the container image. For example: `docker run -v /path/to/custom/configs:/app/config app-smolvlm2-captioner python cli.py --config custom.yaml input.mmif output.mmif`
+
 ### Prompt Handling
 - The app will use a label-specific prompt from `custom_prompts` if available (via `promptMap`), otherwise it will use the `default_prompt` (via `defaultPrompt`).
 - If neither is provided, a generic fallback prompt will be used.
