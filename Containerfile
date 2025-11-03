@@ -38,9 +38,9 @@ ENV CLAMS_APP_VERSION ${CLAMS_APP_VERSION}
 #     rm cuda-keyring_1.0-1_all.deb
 
 # Set CUDA environment variables
-ENV CUDA_HOME=/usr/local/cuda-12.1
-ENV PATH=${CUDA_HOME}/bin:${PATH}
-ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+# ENV CUDA_HOME=/usr/local/cuda-12.1
+# ENV PATH=${CUDA_HOME}/bin:${PATH}
+# ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
 
 ################################################################################
 # main app installation
