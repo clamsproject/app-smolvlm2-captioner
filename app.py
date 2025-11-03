@@ -28,14 +28,21 @@ class SmolVLM2Captioner(ClamsApp):
             self.logger.info("CUDA not available, using CPU")
         
         self.device = device
-        
-        self.model = AutoModelForImageTextToText.from_pretrained(
-            "HuggingFaceTB/SmolVLM2-2.2B-Instruct", 
-            device_map="auto" if device == "cuda" else None,
-            torch_dtype=torch.bfloat16 if device == "cuda" else torch.float32,
-            attn_implementation="flash_attention_2" if device == "cuda" else "eager",
-        )
-        
+        try: # try to use flash attention
+            self.model = AutoModelForImageTextToText.from_pretrained(
+                "HuggingFaceTB/SmolVLM2-2.2B-Instruct", 
+                device_map="auto" if device == "cuda" else None,
+                torch_dtype=torch.bfloat16 if device == "cuda" else torch.float32,
+                attn_implementation="flash_attention_2" if device == "cuda" else "eager",
+            )
+        except:
+            self.model = AutoModelForImageTextToText.from_pretrained(
+                "HuggingFaceTB/SmolVLM2-2.2B-Instruct", 
+                device_map="auto" if device == "cuda" else None,
+                torch_dtype=torch.bfloat16 if device == "cuda" else torch.float32,
+                attn_implementation="eager",
+            )
+
         # If using CPU, explicitly move model to CPU
         if device == "cpu":
             self.model = self.model.to("cpu")
