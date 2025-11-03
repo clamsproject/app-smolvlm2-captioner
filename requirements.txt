@@ -11,6 +11,5 @@ accelerate==0.30.1
 sentencepiece
 tqdm
 pyyaml
-# flash-attn>=2.3.3
 scikit-image
 num2words
