@@ -23,6 +23,6 @@ context_config:
     app_uri: "http://apps.clams.ai/swt-detection/"
           
     label_mapping:
-      "chyron": "chyron"
+      "Chyron": "chyron"
 
     ignore_other_labels: true
