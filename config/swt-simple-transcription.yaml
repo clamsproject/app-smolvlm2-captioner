@@ -1,0 +1,50 @@
+## Simple OCR configuration for SWT-detected text regions
+## Provides basic transcription with minimal prompt engineering
+## Designed for use with app-swt-detection output
+
+default_prompt: |
+  Transcribe all visible text in this image. Include all text exactly as it appears.
+
+custom_prompts:
+  "slate": |
+    This is a slate frame from a video. Transcribe all visible text including:
+    - Program title
+    - Date
+    - Production codes or identifiers
+    - Network or production company names
+    - Any other text
+
+    Provide the text as it appears, preserving formatting where possible.
+
+  "chyron": |
+    This is a chyron (lower-third graphic). Transcribe the text from the chyron including:
+    - Person's name
+    - Title or role
+    - Location or affiliation
+    - Any other details
+
+    Transcribe the text exactly as it appears, line by line.
+
+  "Chyron": |
+    This is a chyron (lower-third graphic). Transcribe the text from the chyron including:
+    - Person's name
+    - Title or role
+    - Location or affiliation
+    - Any other details
+
+    Transcribe the text exactly as it appears, line by line.
+
+context_config:
+  input_context: "timeframe"
+
+  timeframe:
+    app_uri: "http://apps.clams.ai/swt-detection/"
+
+    label_mapping:
+      "slate": "slate"
+      "chyron": "chyron"
+      "Chyron": "Chyron"
+      "credits": "default"
+      "Credits": "default"
+
+    ignore_other_labels: false
