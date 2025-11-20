@@ -57,6 +57,19 @@ def appmetadata() -> AppMetadata:
                      'in order to skip all timeframes not specified in the promptMap, set the defaultPrompt'
                      'parameter to `-`'))
     
+    metadata.add_parameter(
+        name='defaultSystemPrompt', type='string', default='',
+        description='default system prompt to use for all timeframes. System prompts are passed to the model using the '
+                   'messages format with role="system", providing context or instructions that guide the model\'s behavior. '
+                   'The processor will format this properly using its chat template.'
+    )
+    metadata.add_parameter(
+        name='systemPromptMap', type='map', default=[],
+        description=('mapping of labels of the input timeframe annotations to system prompts. Must be formatted as '
+                     '\"IN_LABEL:SYSTEM_PROMPT\" (with a colon). To pass multiple mappings, use this parameter multiple '
+                     'times. System prompts are passed to the model using the messages format with role="system", '
+                     'providing context or instructions that guide the model\'s behavior.'))
+    
 
     # add parameter for config file name
     metadata.add_parameter(
@@ -68,6 +81,13 @@ def appmetadata() -> AppMetadata:
         name='num_beams', type='integer', default=1,
         description='Number of beams for beam search during text generation. Default is 1. '
                     'Higher values may improve quality but increase generation time.'
+    )
+    
+    # add parameter for batch_size
+    metadata.add_parameter(
+        name='batchSize', type='integer', default=12,
+        description='Number of images to process in each batch. Default is 12. '
+                    'Higher values may improve throughput but require more memory.'
     )
     
     return metadata
