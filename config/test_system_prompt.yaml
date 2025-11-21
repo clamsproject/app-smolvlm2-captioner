@@ -1,0 +1,43 @@
+default_prompt: |
+  Describe what is shown in this video frame. Analyze the purpose of this frame in the context of a news video. Transcribe any text present.
+
+default_system_prompt: |
+  You are an expert video analyst specializing in broadcast news content. Your task is to provide detailed, accurate descriptions of video frames with a focus on identifying key visual elements, text content, and contextual information relevant to news production.
+
+context_config:
+  input_context: "timeframe"
+  
+  timeframe:
+    app_uri: "http://apps.clams.ai/swt-detection/"
+    label_mapping:
+      "slate": "slate"
+      "credits": "credits"
+      "chyron": "chyron"
+
+custom_prompts:
+  slate: |
+    This is a slate frame from a video. Please analyze it and extract all key information: 
+    - Title of the program
+    - Date of recording
+    - Any identifiers, codes, or numbers
+    - Name of production company or network
+    - Any other textual information visible 
+    
+    Format the information clearly.
+  
+  credits: |
+    This frame contains credits. Describe what is visible in the frame, including any text, names, and information displayed.
+  
+  chyron: |
+    This frame contains a chyron (lower-third graphic). Describe the chyron content, including names, titles, and any other information displayed.
+
+custom_system_prompts:
+  slate: |
+    You are an expert at analyzing broadcast slate frames. Focus on extracting structured information accurately.
+  
+  credits: |
+    You are analyzing video credits. Focus on identifying names, roles, and production information.
+  
+  chyron: |
+    You are analyzing a chyron (lower-third graphic). Focus on extracting the person's name, title, and any other displayed information.
+
