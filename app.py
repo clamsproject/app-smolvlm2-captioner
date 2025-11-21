@@ -30,7 +30,11 @@ class SmolVLM2Captioner(ClamsApp):
         self.logger.info(f"Loading model from {model_path}")
         
         # Load processor and model
-        self.processor = AutoProcessor.from_pretrained(model_path)
+        # Force video_processor config to be saved as video_preprocessor.json to avoid deprecation warning
+        import warnings
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=".*preprocessor.json.*deprecated.*")
+            self.processor = AutoProcessor.from_pretrained(model_path)
         
         # --- CRITICAL CONFIGURATION ---
         # Decoder-only models must use left-padding for generation
@@ -163,8 +167,10 @@ class SmolVLM2Captioner(ClamsApp):
                     return_tensors="pt"
                 )
 
-                # 3. Move to device
+                # 3. Move to device and ensure correct dtype for pixel values
                 inputs = inputs.to(self.device)
+                if 'pixel_values' in inputs and inputs['pixel_values'] is not None:
+                    inputs['pixel_values'] = inputs['pixel_values'].to(dtype=torch.bfloat16)
                 
                 # 4. Generate
                 generated_ids = self.model.generate(**inputs, max_new_tokens=200)
