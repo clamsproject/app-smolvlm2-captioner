@@ -215,6 +215,8 @@ class SmolVLM2Captioner(ClamsApp):
         # --- TIMEFRAME MODE ---
         elif input_context == 'timeframe':
             app_uri = config['context_config']['timeframe']['app_uri']
+            all_targets_config = config['context_config']['timeframe'].get('all_targets', {})
+            
             all_views = mmif.get_all_views_contain(AnnotationTypes.TimeFrame)
             timeframes = []
             
@@ -231,37 +233,104 @@ class SmolVLM2Captioner(ClamsApp):
                 if not timeframes:
                     self.logger.warning("No timeframes found matching label_mapping")
                     return mmif
+            
+            # --- TESTING MODE: Process only first timeframe per label ---
+            if parameters.get('testing', False):
+                seen_labels = set()
+                filtered_timeframes = []
+                for tf in timeframes:
+                    label = tf.get_property('label')
+                    if label not in seen_labels:
+                        filtered_timeframes.append(tf)
+                        seen_labels.add(label)
+                timeframes = filtered_timeframes
+                self.logger.info(f"Testing mode enabled: processing {len(timeframes)} timeframes (1 per label)")
+            # -----------------------------------------------------------
 
             for timeframe in timeframes:
                 timeframe.add_property('timeUnit', 'milliseconds')
             
-            all_frame_numbers = [vdh.get_representative_framenum(mmif, timeframe) for timeframe in timeframes]
             video_doc = mmif.get_documents_by_type(DocumentTypes.VideoDocument)[0]
+            
+            # Flattened list of tasks
+            tasks = []
+            frames_to_extract = []
+            
+            # Helper to resolve target ID to frame number
+            view_cache = {}
+            
+            def get_target_framenum(target_id):
+                vid = target_id.split(':')[0]
+                if vid not in view_cache:
+                    try:
+                        view_cache[vid] = mmif.get_view_by_id(vid)
+                    except:
+                        self.logger.warning(f"Could not find view for target {target_id}")
+                        return None
+                
+                view = view_cache[vid]
+                if not view: return None
+                
+                try:
+                    ann = view.annotations.get(target_id)
+                    if not ann: return None
+                    # Assuming target is TimePoint
+                    if ann.at_type == AnnotationTypes.TimePoint:
+                         ms = vdh.convert_timepoint(mmif, ann, 'milliseconds')
+                         return vdh.millisecond_to_framenum(video_doc, ms)
+                    return None
+                except Exception as e:
+                    self.logger.error(f"Error resolving target {target_id}: {e}")
+                    return None
 
-            # Extract all images first
-            all_images = vdh.extract_frames_as_images(video_doc, all_frame_numbers, as_PIL=True)
+            for timeframe in timeframes:
+                label = timeframe.get_property('label')
+                mapped_label = label_mapping.get(label, 'default')
+                prompt = self.get_prompts(mapped_label, parameters)
+                
+                use_all_targets = all_targets_config.get(label, False)
+                
+                if use_all_targets:
+                    targets = timeframe.get_property('targets')
+                    if targets:
+                        for target_id in targets:
+                            framenum = get_target_framenum(target_id)
+                            if framenum is not None:
+                                tasks.append({
+                                    'prompt': prompt,
+                                    'source': target_id, # Use target ID as source
+                                    'origin': timeframe.long_id # Keep TimeFrame as origin
+                                })
+                                frames_to_extract.append(framenum)
+                else:
+                    framenum = vdh.get_representative_framenum(mmif, timeframe)
+                    tasks.append({
+                        'prompt': prompt,
+                        'source': timeframe.long_id,
+                        'origin': timeframe.long_id
+                    })
+                    frames_to_extract.append(framenum)
 
-            for batch_idx in tqdm.tqdm(range(0, len(timeframes), batch_size)):
-                batch_timeframes = timeframes[batch_idx:batch_idx + batch_size]
+            if not tasks:
+                self.logger.info("No tasks generated from timeframes.")
+                return mmif
+
+            # Extract all images
+            all_images = vdh.extract_frames_as_images(video_doc, frames_to_extract, as_PIL=True)
+            
+            # Batch process
+            for batch_idx in tqdm.tqdm(range(0, len(tasks), batch_size)):
+                batch_tasks = tasks[batch_idx:batch_idx + batch_size]
                 batch_images = all_images[batch_idx:batch_idx + batch_size]
                 
-                prompts = []
-                annotations_batch = []
+                prompts_batch = [t['prompt'] for t in batch_tasks]
+                annotations_batch = [{
+                    'source': t['source'],
+                    'document_id': video_doc.id,
+                    'origin_id': t['origin']
+                } for t in batch_tasks]
                 
-                for idx_in_batch, timeframe in enumerate(batch_timeframes):
-                    label = timeframe.get_property('label')
-                    mapped_label = label_mapping.get(label, 'default')
-                    prompts.append(self.get_prompts(mapped_label, parameters))
-                    
-                    # FIX: Do NOT create a new TimePoint. 
-                    # Use the existing TimeFrame ID from the previous view as source.
-                    annotations_batch.append({
-                        'source': timeframe.long_id,
-                        'document_id': video_doc.id,
-                        'origin_id': timeframe.long_id
-                    })
-
-                process_batch(prompts, batch_images, annotations_batch)
+                process_batch(prompts_batch, batch_images, annotations_batch)
 
         # --- FIXED WINDOW MODE ---
         elif input_context == 'fixed_window':
