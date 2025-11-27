@@ -289,6 +289,18 @@ class SmolVLM2Captioner(ClamsApp):
                     self.logger.error(f"Error resolving target {target_id}: {e}")
                     return None
 
+            # Get video fps for sampling calculations
+            try:
+                video_fps = float(video_doc.get_property('fps'))
+            except:
+                video_fps = 29.97
+                
+            fps_param = parameters.get('fps', 0.0)
+            try:
+                fps_param = float(fps_param)
+            except:
+                fps_param = 0.0
+
             for timeframe in timeframes:
                 label = timeframe.get_property('label')
                 mapped_label = label_mapping.get(label, 'default')
@@ -296,7 +308,48 @@ class SmolVLM2Captioner(ClamsApp):
                 
                 use_all_targets = all_targets_config.get(label, False)
                 
-                if use_all_targets:
+                if fps_param > 0:
+                    # Sampling logic: Select subset of existing targets
+                    targets = timeframe.get_property('targets')
+                    if targets:
+                         # Resolve targets to find range
+                         available_frames = []
+                         for t_id in targets:
+                             f = get_target_framenum(t_id)
+                             if f is not None:
+                                 available_frames.append((f, t_id))
+                         
+                         if available_frames:
+                             # Sort by frame number
+                             available_frames.sort(key=lambda x: x[0])
+                             
+                             start_frame = available_frames[0][0]
+                             end_frame = available_frames[-1][0]
+                             
+                             step = video_fps / fps_param
+                             current_ideal = float(start_frame)
+                             
+                             selected_ids = set()
+                             
+                             # Helper to find closest target
+                             def get_closest(val, pool):
+                                 return min(pool, key=lambda x: abs(x[0] - val))
+                             
+                             while current_ideal <= end_frame + (step * 0.1): # Small buffer
+                                 closest_frame, closest_id = get_closest(current_ideal, available_frames)
+                                 
+                                 if closest_id not in selected_ids:
+                                     tasks.append({
+                                         'prompt': prompt,
+                                         'source': closest_id,
+                                         'origin': timeframe.long_id
+                                     })
+                                     frames_to_extract.append(closest_frame)
+                                     selected_ids.add(closest_id)
+                                     
+                                 current_ideal += step
+
+                elif use_all_targets:
                     targets = timeframe.get_property('targets')
                     if targets:
                         for target_id in targets:
