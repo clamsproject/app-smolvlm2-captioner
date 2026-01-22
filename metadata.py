@@ -89,7 +89,15 @@ def appmetadata() -> AppMetadata:
         description='Number of images to process in each batch. Default is 12. '
                     'Higher values may improve throughput but require more memory.'
     )
-    
+
+    # add parameter for allRepresentatives
+    metadata.add_parameter(
+        name='allRepresentatives', type='boolean', default=False,
+        description='When true, process all representative TimePoints in each TimeFrame instead of just the first one. '
+                    'This allows captioning multiple frames per TimeFrame when the TimeFrame has multiple representatives. '
+                    'Default is false (only the first representative is processed).'
+    )
+
     return metadata
 
 
