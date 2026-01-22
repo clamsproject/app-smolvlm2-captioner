@@ -362,13 +362,40 @@ class SmolVLM2Captioner(ClamsApp):
                                 })
                                 frames_to_extract.append(framenum)
                 else:
-                    framenum = vdh.get_representative_framenum(mmif, timeframe)
-                    tasks.append({
-                        'prompt': prompt,
-                        'source': timeframe.long_id,
-                        'origin': timeframe.long_id
-                    })
-                    frames_to_extract.append(framenum)
+                    # Use representative frame - need to get both frame number AND the TimePoint ID
+                    # The representatives property contains TimePoint IDs that should be used as alignment source
+                    representatives = timeframe.get_property('representatives')
+                    if representatives:
+                        # Use the first representative TimePoint
+                        rep_tp_id = representatives[0]
+                        framenum = get_target_framenum(rep_tp_id)
+                        if framenum is not None:
+                            tasks.append({
+                                'prompt': prompt,
+                                'source': rep_tp_id,  # TimePoint ID for alignment source
+                                'origin': timeframe.long_id  # TimeFrame ID for TextDocument origin
+                            })
+                            frames_to_extract.append(framenum)
+                        else:
+                            # Representative exists but couldn't resolve frame number - fall back to middle frame
+                            self.logger.warning(f"Could not resolve representative {rep_tp_id}, using middle frame")
+                            framenum = vdh.get_representative_framenum(mmif, timeframe)
+                            tasks.append({
+                                'prompt': prompt,
+                                'source': rep_tp_id,  # Still use the TimePoint ID even if we couldn't get exact frame
+                                'origin': timeframe.long_id
+                            })
+                            frames_to_extract.append(framenum)
+                    else:
+                        # No representatives - fall back to middle frame
+                        # In this case, we use TimeFrame as source since there's no TimePoint to reference
+                        framenum = vdh.get_representative_framenum(mmif, timeframe)
+                        tasks.append({
+                            'prompt': prompt,
+                            'source': timeframe.long_id,
+                            'origin': timeframe.long_id
+                        })
+                        frames_to_extract.append(framenum)
 
             if not tasks:
                 self.logger.info("No tasks generated from timeframes.")
