@@ -111,6 +111,9 @@ class SmolVLM2Captioner(ClamsApp):
                 for label, prompt in config['custom_system_prompts'].items():
                     system_prompt_map.append(f"{label}:{prompt}")
                 parameters['systemPromptMap'] = system_prompt_map
+            # Handle allRepresentatives from config
+            if 'all_representatives' in config:
+                parameters['allRepresentatives'] = config['all_representatives']
         else:
             config = {}
         
@@ -222,6 +225,7 @@ class SmolVLM2Captioner(ClamsApp):
         elif input_context == 'timeframe':
             app_uri = config['context_config']['timeframe']['app_uri']
             all_targets_config = config['context_config']['timeframe'].get('all_targets', {})
+            all_representatives_config = config['context_config']['timeframe'].get('all_representatives', {})
             
             all_views = mmif.get_all_views_contain(AnnotationTypes.TimeFrame)
             timeframes = []
@@ -362,30 +366,35 @@ class SmolVLM2Captioner(ClamsApp):
                                 })
                                 frames_to_extract.append(framenum)
                 else:
-                    # Use representative frame - need to get both frame number AND the TimePoint ID
+                    # Use representative frame(s) - need to get both frame number AND the TimePoint ID
                     # The representatives property contains TimePoint IDs that should be used as alignment source
                     representatives = timeframe.get_property('representatives')
+                    # Check if all_representatives is enabled for this label (from config or CLI parameter)
+                    use_all_representatives = all_representatives_config.get(label, parameters.get('allRepresentatives', False))
+
                     if representatives:
-                        # Use the first representative TimePoint
-                        rep_tp_id = representatives[0]
-                        framenum = get_target_framenum(rep_tp_id)
-                        if framenum is not None:
-                            tasks.append({
-                                'prompt': prompt,
-                                'source': rep_tp_id,  # TimePoint ID for alignment source
-                                'origin': timeframe.long_id  # TimeFrame ID for TextDocument origin
-                            })
-                            frames_to_extract.append(framenum)
-                        else:
-                            # Representative exists but couldn't resolve frame number - fall back to middle frame
-                            self.logger.warning(f"Could not resolve representative {rep_tp_id}, using middle frame")
-                            framenum = vdh.get_representative_framenum(mmif, timeframe)
-                            tasks.append({
-                                'prompt': prompt,
-                                'source': rep_tp_id,  # Still use the TimePoint ID even if we couldn't get exact frame
-                                'origin': timeframe.long_id
-                            })
-                            frames_to_extract.append(framenum)
+                        # Determine which representatives to process
+                        reps_to_process = representatives if use_all_representatives else [representatives[0]]
+
+                        for rep_tp_id in reps_to_process:
+                            framenum = get_target_framenum(rep_tp_id)
+                            if framenum is not None:
+                                tasks.append({
+                                    'prompt': prompt,
+                                    'source': rep_tp_id,  # TimePoint ID for alignment source
+                                    'origin': timeframe.long_id  # TimeFrame ID for TextDocument origin
+                                })
+                                frames_to_extract.append(framenum)
+                            else:
+                                # Representative exists but couldn't resolve frame number - fall back to middle frame
+                                self.logger.warning(f"Could not resolve representative {rep_tp_id}, using middle frame")
+                                framenum = vdh.get_representative_framenum(mmif, timeframe)
+                                tasks.append({
+                                    'prompt': prompt,
+                                    'source': rep_tp_id,  # Still use the TimePoint ID even if we couldn't get exact frame
+                                    'origin': timeframe.long_id
+                                })
+                                frames_to_extract.append(framenum)
                     else:
                         # No representatives - fall back to middle frame
                         # In this case, we use TimeFrame as source since there's no TimePoint to reference

@@ -84,6 +84,75 @@ This is a slate frame from a video. Please analyze it and extract all key inform
 Format the information clearly.
 ```
 
+## Output Format
+
+When processing in `timeframe` mode, the app produces `TextDocument` and `Alignment` annotations with specific linking conventions:
+
+### Annotation Linking
+
+For each processed frame, the app creates:
+
+1. **TextDocument**: Contains the captioned text with:
+   - `origin`: Points to the **TimeFrame** annotation that was the source of the processing task
+   - `document`: Points to the video document
+
+2. **Alignment**: Links the TextDocument to its source with:
+   - `source`: Points to the **TimePoint** annotation that was actually processed (the specific frame)
+   - `target`: Points to the TextDocument created
+
+### Example Output
+
+```json
+{
+  "@type": "http://mmif.clams.ai/vocabulary/TextDocument/v1",
+  "properties": {
+    "document": "m1",
+    "origin": "v_1:tf_38",
+    "provenance": "derived",
+    "mime": "application/json",
+    "text": { "@value": "JOHN MARCUM Africa", "@language": "en" },
+    "id": "v_2:td_9"
+  }
+},
+{
+  "@type": "http://mmif.clams.ai/vocabulary/Alignment/v1",
+  "properties": {
+    "source": "v_0:tp_5389",
+    "target": "v_2:td_9",
+    "id": "v_2:al_9"
+  }
+}
+```
+
+In this example:
+- The TextDocument's `origin` (`v_1:tf_38`) references the TimeFrame that triggered processing
+- The Alignment's `source` (`v_0:tp_5389`) references the specific TimePoint (frame) that was captioned
+- This allows downstream applications to trace both which TimeFrame was processed AND which specific frame within that TimeFrame was used
+
+### Processing Multiple Representatives
+
+By default, only the first representative TimePoint in each TimeFrame is processed. You can enable processing of all representatives either globally or per-label.
+
+**Per-label configuration (recommended):**
+```yaml
+context_config:
+  timeframe:
+    all_representatives:
+      slate: true      # Process all representatives for slates
+      chyron: false    # Only first representative for chyrons
+```
+
+**Global default via CLI parameter:**
+```bash
+python cli.py --allRepresentatives input.mmif output.mmif
+```
+
+The per-label config takes precedence over the CLI parameter. When enabled for a label, each representative TimePoint in the TimeFrame will be captioned separately, with each resulting TextDocument linked to its corresponding TimePoint via the Alignment annotation.
+
+### Fallback Behavior
+
+If a TimeFrame does not have a `representatives` property (no specific TimePoint to reference), the app falls back to using the middle frame of the TimeFrame. In this case, the Alignment's `source` will point to the TimeFrame itself since there is no TimePoint to reference.
+
 ## Model Information
 
 - SmolVLM2-2.2B-Instruct is a lightweight multimodal model that can process both text and images

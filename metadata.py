@@ -93,8 +93,10 @@ def appmetadata() -> AppMetadata:
     # add parameter for allRepresentatives
     metadata.add_parameter(
         name='allRepresentatives', type='boolean', default=False,
-        description='When true, process all representative TimePoints in each TimeFrame instead of just the first one. '
-                    'This allows captioning multiple frames per TimeFrame when the TimeFrame has multiple representatives. '
+        description='Default setting for processing all representative TimePoints in each TimeFrame. '
+                    'When true, all representatives are processed instead of just the first one. '
+                    'This can be overridden per-label in the config file using the all_representatives mapping '
+                    '(e.g., all_representatives: {slate: true, chyron: false}). '
                     'Default is false (only the first representative is processed).'
     )
 
