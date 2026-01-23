@@ -13,6 +13,9 @@ context_config:
     label_mapping:
       "slate": "slate"
       "non-slate": "default"
+    # all_representatives:  # Per-label config for processing all representatives
+    #   slate: true         # Process all representative frames for slates
+    #   chyron: false       # Only process first representative for chyrons
 
 custom_prompts:
   slate: |
