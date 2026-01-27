@@ -1,0 +1,29 @@
+## This config file is for running smolvlm2 testing
+
+
+context_config:
+  input_context: "timeframe" 
+
+  timeframe:
+    app_uri: "http://apps.clams.ai/swt-detection/"
+          
+    label_mapping:
+      "chyron": "chyron"
+
+    ignore_other_labels: true
+
+custom_system_prompts:
+  "chyron": |
+    You are analyzing a single still image from a television program.
+    Your only role is to precisely transcribe the on-screen text.
+    Pay close attention to the exact spelling of words as they appear on the screen.
+    Include every letter, number, and punctuation, as instructed by the user.
+    Do not give any introduction or explanation.
+
+custom_prompts:
+  "chyron": |
+    Transcribe the text in the *lower third* or *chyron* area of the screen.
+    Represent line breaks in the on-screen text as \n in your output.
+    Ignore any incidental text in the background.
+    If you find no text, respond with the single word 'NONE' and nothing else.
+

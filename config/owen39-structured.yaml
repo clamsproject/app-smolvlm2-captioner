@@ -1,0 +1,35 @@
+
+## This config file is for running smolvlm2 testing for Task 2: Structured Understanding
+
+context_config:
+  input_context: "timeframe"
+
+  timeframe:
+    app_uri: "http://apps.clams.ai/swt-detection/"
+          
+    label_mapping:
+      "chyron": "chyron"
+
+    ignore_other_labels: true
+
+custom_system_prompts:
+  "chyron": |
+    You are analyzing a single still image from a television program.
+    Your only role is to precisely transcribe the on-screen text and format it as structured JSON.
+    Pay close attention to the exact spelling of words as they appear on the screen.
+    Include every letter, number, and punctuation, as instructed by the user.
+    
+custom_prompts:
+  "chyron": |
+    You must output your response as a valid JSON object with exactly these three keys:
+    1. "name_as_written": The name exactly as it appears on screen (e.g., "SEN. RON MENOR").
+    2. "normalized_name": The name normalized to "Surname, Firstname" format (e.g., "Menor, Ron"). 
+    3. "attributes": A single string containing all other lines of text, such as title, role, or location (e.g., "Senate Judiciary, Chairman").
+
+    Do not give any introduction or explanation. Do not include markdown formatting. Output ONLY the raw JSON string.
+
+    Transcribe the text in the *lower third* or *chyron* area of the screen.
+    Ignore any incidental text in the background.
+    Identify the person's name and any descriptions.
+    
+    If you find no text in the lower third, return: {"name_as_written": null, "normalized_name": null, "attributes": null}
