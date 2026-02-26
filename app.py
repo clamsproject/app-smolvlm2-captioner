@@ -410,21 +410,36 @@ class SmolVLM2Captioner(ClamsApp):
                 self.logger.info("No tasks generated from timeframes.")
                 return mmif
 
+            # Sort tasks by frame number so extract_frames_as_images receives
+            # monotonically increasing positions (it reads the video sequentially).
+            # Without sorting, overlapping timeframes can produce out-of-order
+            # frame numbers, causing the extractor to skip past earlier frames.
+            task_frame_pairs = list(zip(tasks, frames_to_extract))
+            task_frame_pairs.sort(key=lambda x: x[1])
+            tasks = [pair[0] for pair in task_frame_pairs]
+            frames_to_extract = [pair[1] for pair in task_frame_pairs]
+
             # Extract all images
             all_images = vdh.extract_frames_as_images(video_doc, frames_to_extract, as_PIL=True)
-            
+
+            if len(all_images) != len(tasks):
+                self.logger.warning(
+                    f"Frame extraction mismatch: expected {len(tasks)} frames, "
+                    f"got {len(all_images)}. Some frames may have failed to extract."
+                )
+
             # Batch process
-            for batch_idx in tqdm.tqdm(range(0, len(tasks), batch_size)):
+            for batch_idx in tqdm.tqdm(range(0, len(all_images), batch_size)):
                 batch_tasks = tasks[batch_idx:batch_idx + batch_size]
                 batch_images = all_images[batch_idx:batch_idx + batch_size]
-                
+
                 prompts_batch = [t['prompt'] for t in batch_tasks]
                 annotations_batch = [{
                     'source': t['source'],
                     'document_id': video_doc.id,
                     'origin_id': t['origin']
                 } for t in batch_tasks]
-                
+
                 process_batch(prompts_batch, batch_images, annotations_batch)
 
         # --- FIXED WINDOW MODE ---
