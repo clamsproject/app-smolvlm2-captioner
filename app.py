@@ -410,28 +410,36 @@ class SmolVLM2Captioner(ClamsApp):
                 self.logger.info("No tasks generated from timeframes.")
                 return mmif
 
-            # Sort tasks by frame number so extract_frames_as_images receives
-            # monotonically increasing positions (it reads the video sequentially).
-            # Without sorting, overlapping timeframes can produce out-of-order
-            # frame numbers, causing the extractor to skip past earlier frames.
-            task_frame_pairs = list(zip(tasks, frames_to_extract))
-            task_frame_pairs.sort(key=lambda x: x[1])
-            tasks = [pair[0] for pair in task_frame_pairs]
-            frames_to_extract = [pair[1] for pair in task_frame_pairs]
+            # extract_frames_as_images reads the video sequentially and
+            # expects strictly increasing frame numbers.  Overlapping
+            # timeframes can produce both out-of-order AND duplicate frame
+            # numbers.  Duplicates are fatal: after extracting frame N the
+            # reader advances past it, so a second request for N stalls the
+            # entire extraction loop.
+            #
+            # Strategy: deduplicate frame numbers, extract each unique frame
+            # once, then map the images back to every task that needs them.
+            unique_frames = sorted(set(frames_to_extract))
+            unique_images = vdh.extract_frames_as_images(video_doc, unique_frames, as_PIL=True)
 
-            # Extract all images
-            all_images = vdh.extract_frames_as_images(video_doc, frames_to_extract, as_PIL=True)
+            # Build a lookup from frame number to extracted image
+            frame_to_image = dict(zip(unique_frames, unique_images))
 
-            if len(all_images) != len(tasks):
-                self.logger.warning(
-                    f"Frame extraction mismatch: expected {len(tasks)} frames, "
-                    f"got {len(all_images)}. Some frames may have failed to extract."
-                )
+            # Sort tasks by frame number and pair each with its image
+            task_frame_pairs = sorted(zip(tasks, frames_to_extract), key=lambda x: x[1])
+            tasks_sorted = []
+            images_sorted = []
+            for task, fnum in task_frame_pairs:
+                if fnum in frame_to_image:
+                    tasks_sorted.append(task)
+                    images_sorted.append(frame_to_image[fnum])
+                else:
+                    self.logger.warning(f"Frame {fnum} could not be extracted, skipping task")
 
             # Batch process
-            for batch_idx in tqdm.tqdm(range(0, len(all_images), batch_size)):
-                batch_tasks = tasks[batch_idx:batch_idx + batch_size]
-                batch_images = all_images[batch_idx:batch_idx + batch_size]
+            for batch_idx in tqdm.tqdm(range(0, len(tasks_sorted), batch_size)):
+                batch_tasks = tasks_sorted[batch_idx:batch_idx + batch_size]
+                batch_images = images_sorted[batch_idx:batch_idx + batch_size]
 
                 prompts_batch = [t['prompt'] for t in batch_tasks]
                 annotations_batch = [{
