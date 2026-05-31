@@ -1,104 +1,107 @@
 """
-The purpose of this file is to define the metadata of the app with minimal imports. 
+The purpose of this file is to define the metadata of the app with minimal imports.
 
 DO NOT CHANGE the name of the file
 """
 
 from mmif import DocumentTypes, AnnotationTypes
 
-from clams.app import ClamsApp
+from clams.app import ClamsApp, ClamsHFPromptableApp
 from clams.appmetadata import AppMetadata
 
 
-# DO NOT CHANGE the function name 
+# DO NOT CHANGE the function name
 def appmetadata() -> AppMetadata:
     """
     Function to set app-metadata values and return it as an ``AppMetadata`` obj.
     Read these documentations before changing the code below
-    - https://sdk.clams.ai/appmetadata.html metadata specification. 
-    - https://sdk.clams.ai/autodoc/clams.appmetadata.html python API
-    
+    - https://clams.ai/clams-python/appmetadata.html metadata specification.
+    - https://clams.ai/clams-python/autodoc/clams.appmetadata.html python API
+
     :return: AppMetadata object holding all necessary information.
     """
-    
-    # first set up some basic information
+
     metadata = AppMetadata(
         name="SmolVLM2 Captioner",
-        description="Applies SmolVLM2-2.2B-Instruct multimodal model to video frames for image captioning.",
+        description="Applies the SmolVLM2-2.2B-Instruct multimodal model to video frames "
+                    "selected by input TimeFrame annotations for prompt-driven captioning "
+                    "/ scene description. Each invocation runs a single `prompt` against "
+                    "the TimeFrames selected by `tfLabels`; to apply different prompts to "
+                    "different label subsets (e.g. one prompt for slates, another for "
+                    "chyrons), run the app once per (`prompt`, `tfLabels`) combination. "
+                    "Per-TimeFrame captioning is composite: every frame sampled from a TF "
+                    "is fed to the model in a single prompt and yields one caption per TF. "
+                    "This app ships only the 2.2B-Instruct variant -- the largest and most "
+                    "general-purpose model in the SmolVLM2 family. The smaller (256M and 500M) "
+                    "SmolVLM2 releases are post-trained specifically for video-QA tasks and we "
+                    "do not expect them to generalize well, given their size.",
         app_license="Apache 2.0",
         identifier="smolvlm2-captioner",
-        url="https://github.com/clamsproject/app-smolvlm2-captioner"
+        url="https://github.com/clamsproject/app-smolvlm2-captioner",
+        # To support more SmolVLM2 variants, add the Hub model id and its pinned
+        # commit hash to this dict; the SDK auto-derives the `model` runtime
+        # parameter's choices from these keys.
+        analyzer_versions={
+            "HuggingFaceTB/SmolVLM2-2.2B-Instruct": "482adb5",
+        },
+        analyzer_license="Apache 2.0",
+        est_gpu_mem_min=5000,
+        est_gpu_mem_typ=7000,
     )
 
-    # and then add I/O specifications: an app must have at least one input and one output
     metadata.add_input(DocumentTypes.VideoDocument)
-    metadata.add_input(DocumentTypes.ImageDocument)
-    metadata.add_input(AnnotationTypes.TimeFrame)
-    metadata.add_output(AnnotationTypes.Alignment)
-    metadata.add_output(DocumentTypes.TextDocument)
-    
-    # (optional) and finally add runtime parameter specifications
-    metadata.add_parameter(
-        name='frameInterval', type='integer', default=30,
-        description='The interval at which to extract frames from the video if there are no timeframe annotations. '
-        'Default is every 30 frames.'
-    )
-    metadata.add_parameter(
-        name='defaultPrompt', type='string', default='Describe what is shown in this video frame. Analyze the purpose of this frame in the context of a news video. Transcribe any text present.',
-        description='default prompt to use for timeframes not specified in the promptMap. If set to `-`, '
-                     'timeframes not specified in the promptMap will be skipped.'
-    )
-    metadata.add_parameter(
-        name='promptMap', type='map', default=[],
-        description=('mapping of labels of the input timeframe annotations to new prompts. Must be formatted as '
-                     '\"IN_LABEL:PROMPT\" (with a colon). To pass multiple mappings, use this parameter multiple '
-                     'times. By default, any timeframe labels not mapped to a prompt will be used with the default'
-                     'prompt. In order to skip timeframes with a particular label, pass `-` as the prompt value.'
-                     'in order to skip all timeframes not specified in the promptMap, set the defaultPrompt'
-                     'parameter to `-`'))
-    
-    metadata.add_parameter(
-        name='defaultSystemPrompt', type='string', default='',
-        description='default system prompt to use for all timeframes. System prompts are passed to the model using the '
-                   'messages format with role="system", providing context or instructions that guide the model\'s behavior. '
-                   'The processor will format this properly using its chat template.'
-    )
-    metadata.add_parameter(
-        name='systemPromptMap', type='map', default=[],
-        description=('mapping of labels of the input timeframe annotations to system prompts. Must be formatted as '
-                     '\"IN_LABEL:SYSTEM_PROMPT\" (with a colon). To pass multiple mappings, use this parameter multiple '
-                     'times. System prompts are passed to the model using the messages format with role="system", '
-                     'providing context or instructions that guide the model\'s behavior.'))
-    
+    in_tf = metadata.add_input(
+        AnnotationTypes.TimeFrame, representatives='?', label='*')
+    in_tf.add_description(
+        'Labeled TimeFrame annotations selecting which video segments to caption. '
+        'Frame selection within each segment is controlled by the universal '
+        '`tfSamplingMode` parameter (see SDK docs). When present, the '
+        '`representatives` property is consumed for representative-based sampling '
+        'modes. Filter by label with the `tfLabels` parameter.')
 
-    # add parameter for config file name
-    metadata.add_parameter(
-        name='config', type='string', default="config/default.yaml", description='Name of the config file to use.'
+    out_td = metadata.add_output(
+        DocumentTypes.TextDocument,
+        origins='*',
+        origination='derived',
     )
-    
-    # add parameter for num_beams
-    metadata.add_parameter(
-        name='num_beams', type='integer', default=1,
-        description='Number of beams for beam search during text generation. Default is 1. '
-                    'Higher values may improve quality but increase generation time.'
+    out_td.add_description('Caption text generated by the SmolVLM2 model for each '
+                           'processed image. The `origins` property points to the '
+                           '`TimePoint` anchoring the image (an existing TimePoint '
+                           'reused when one already backs the image, or a TimePoint '
+                           'newly created in this view when the image was sampled from '
+                           'a TimeFrame interval without a backing TimePoint).')
+    out_align = metadata.add_output(AnnotationTypes.Alignment)
+    out_align.add_description('Alignment between each parent TimeFrame and the '
+                              'TextDocument(s) derived from it.')
+    out_tp = metadata.add_output(
+        AnnotationTypes.TimePoint,
+        timeUnit='milliseconds',
+        timePoint='*',
     )
-    
-    # add parameter for batch_size
-    metadata.add_parameter(
-        name='batchSize', type='integer', default=12,
-        description='Number of images to process in each batch. Default is 12. '
-                    'Higher values may improve throughput but require more memory.'
-    )
+    out_tp.add_description('Optional output. Newly-created TimePoint annotations for '
+                           'images that were sampled from a TimeFrame interval without '
+                           'an existing backing TimePoint (see `tfSamplingMode`). When '
+                           'every sampled image came from an existing TimePoint, no '
+                           "TimePoints are created")
 
-    # add parameter for allRepresentatives
     metadata.add_parameter(
-        name='allRepresentatives', type='boolean', default=False,
-        description='Default setting for processing all representative TimePoints in each TimeFrame. '
-                    'When true, all representatives are processed instead of just the first one. '
-                    'This can be overridden per-label in the config file using the all_representatives mapping '
-                    '(e.g., all_representatives: {slate: true, chyron: false}). '
-                    'Default is false (only the first representative is processed).'
-    )
+        name='tfLabels', type='string', default=[], multivalued=True,
+        description='Label(s) of input TimeFrame annotations to caption. By default '
+                    '(`[]`), all TimeFrames are processed regardless of label. To '
+                    'restrict to specific labels, pass this parameter one or more '
+                    'times.')
+
+    ClamsHFPromptableApp.inject_promptable_parameters(metadata)
+    for p in metadata.parameters:
+        if p.name == 'prompt':
+            p.default = (
+                'You are looking at one or more frames sampled from a single '
+                'segment of a news video. Describe what is shown, the purpose '
+                'of this segment in the broader news video, and transcribe any '
+                'visible text. Produce one consolidated caption across all '
+                'provided frames.')
+        elif p.name == 'maxNewTokens':
+            p.default = 200
 
     return metadata
 

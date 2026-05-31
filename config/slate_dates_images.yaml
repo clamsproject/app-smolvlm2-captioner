@@ -1,6 +1,0 @@
-default_prompt: |
-  [INST] <image>
-  Transcribe all dates in the image. Separate dates with a comma. [/INST]
-
-context_config:
-  input_context: "image"  # Options: "timeframe", "timepoint", "fixed_window", "image"
