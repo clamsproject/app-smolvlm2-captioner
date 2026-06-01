@@ -1,7 +1,3 @@
-.venv/
-venv/
-env/
-
 .git/
 .github/
 .gitignore
@@ -12,10 +8,4 @@ bin/
 build/
 *~
 **/*.pyc
-**/__pycache__
-
-# Additional cleanup
-*.log
-*.tmp
-.pytest_cache/
-.coverage
+**/__pyche__

@@ -1,15 +1,14 @@
 # Make sure clams-python version is explicitly specified, at least the lower bound
-clams-python==1.3.2
+clams-python[hf]>=1.7.0
 mmif-python[cv]
-# Dependencies for SmolVLM2 multimodal model
-torch>=1.10.0
-transformers>=4.37.0
-torchvision>=0.15.0
-Pillow>=8.0.0
-bitsandbytes==0.42.0
-accelerate==0.30.1
+# torchvision: needed by SmolVLM's image/video processor pipeline at the
+# pinned model revision (see metadata.py:analyzer_versions). The
+# clams-python[hf] extra above transitively pulls torch + transformers +
+# pillow + tqdm but not torchvision, and SmolVLMProcessor's sub-processor
+# resolution requires it -- without it, "Unrecognized image processor"
+# fires at load time. Bump in lockstep with any model-revision bump.
+torchvision
+accelerate
 sentencepiece
-tqdm
-pyyaml
-scikit-image
 num2words
+tqdm
