@@ -1,5 +1,5 @@
 # Make sure clams-python version is explicitly specified, at least the lower bound
-clams-python[hf]>=1.7.0
+clams-python[hf]>=1.7.3
 mmif-python[cv]
 # torchvision: needed by SmolVLM's image/video processor pipeline at the
 # pinned model revision (see metadata.py:analyzer_versions). The
