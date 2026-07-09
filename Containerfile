@@ -33,6 +33,8 @@ RUN mkdir /cache ; rm -rf /root/.cache ; ln -s /cache /root/.cache
 # install more system packages as needed using the apt manager
 ################################################################################
 
+# new torch needs triton, and triton needs basic c infra
+RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev && rm -rf /var/lib/apt/lists/*
 ################################################################################
 # main app installation
 COPY ./ /app
